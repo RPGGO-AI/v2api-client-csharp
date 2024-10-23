@@ -37,5 +37,46 @@ namespace v2api_client_csharp
 
             return gameMetadataResponse;
         }
+
+        // Start a game
+        public async Task<StartGameResponse> StartGameAsync(string gameId, string sessionId)
+        {
+            var requestBody = new
+            {
+                game_id = gameId,
+                session_id = sessionId
+            };
+
+            var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/startgame", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var startGameResponse = JsonConvert.DeserializeObject<StartGameResponse>(responseContent);
+
+            return startGameResponse;
+        }
+
+        // Resume a game session
+        public async Task<StartGameResponse> ResumeSessionAsync(string gameId, string sessionId)
+        {
+            var requestBody = new
+            {
+                game_id = gameId,
+                session_id = sessionId
+            };
+
+            var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/resumesession", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var resumeSessionResponse = JsonConvert.DeserializeObject<StartGameResponse>(responseContent);
+
+            return resumeSessionResponse;
+        }
     }
+
 }
