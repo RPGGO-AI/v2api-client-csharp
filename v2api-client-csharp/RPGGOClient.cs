@@ -77,6 +77,76 @@ namespace v2api_client_csharp
 
             return resumeSessionResponse;
         }
+ 
+
+        // Method to monitor SSE stream
+        public async Task MonitorSseAsync(
+            string characterId, 
+            string gameId, 
+            string message, 
+            string messageId, 
+            string sessionId, 
+            Action<string> onChatMessageReceived, 
+            Action<string> onImageMessageReceived)
+        {
+            var requestBody = new
+            {
+                character_id = characterId,
+                game_id = gameId,
+                message = message,
+                message_id = messageId,
+                session_id = sessionId
+            };
+
+            var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/chatsse", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            // Get the stream to read SSE messages
+            var stream = await response.Content.ReadAsStreamAsync();
+            using (var reader = new StreamReader(stream))
+            {
+                string line;
+                string completeMessage = string.Empty;
+
+                // Continuously read the stream
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    //Console.WriteLine("message is " + line);
+                    // SSE events are separated by empty lines
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        if (!string.IsNullOrWhiteSpace(completeMessage))
+                        {
+                            // Trigger callback when the message is complete
+                            var sseMsg = JsonConvert.DeserializeObject<SSEResponse>(completeMessage);
+                            if (sseMsg == null)
+                            {
+                                throw new Exception("json deserialize issue:" + completeMessage);
+                            }
+
+                            if (sseMsg.Data.Result.CharacterType  == "common_npc")
+                            {
+                                onChatMessageReceived(sseMsg.Data.Result.Text);
+                            } 
+                            else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
+                            {
+                                onImageMessageReceived(sseMsg.Data.Result.Image);
+                            }
+
+                            completeMessage = string.Empty;
+                        }
+                    }
+                    else if (line.StartsWith("data:"))
+                    {
+                        // Extract data after the 'data:' field
+                        completeMessage += line.Substring(5).Trim();
+                    }
+                }
+            }
+        }
+
     }
 
 }
