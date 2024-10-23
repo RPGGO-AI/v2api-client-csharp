@@ -24,6 +24,9 @@ v2api-client-csharp/ <br>
 
 ## ❓ How it works
 
+![whiteboard_exported_image (3)](https://github.com/user-attachments/assets/24b8aba6-db17-4dba-a5db-53d42a2c09ce)
+This graph tells the exact magic about how the system works.
+
 Basically, RPGGO covers the end2end pipeline from building a game to rendering a game in real time. As a game developer, all you need to do is very simple:
 1. find a game you want to make it live in 2D graphic. Either, go to https://creator.rpggo.ai to build your own game if you are a good game designer, or go to https://rpggo.ai game lobby to find a game you like. Remember the game id.
 2. fill an [API Key Application form](https://forms.gle/SgYbkZE2aDj38mhT9) with the Game ID you chose, or contact them via email at [dev@rpggo.ai](mailto:dev@rpggo.ai)
