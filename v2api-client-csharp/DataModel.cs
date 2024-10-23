@@ -43,7 +43,7 @@ namespace v2api_client_csharp
         [JsonProperty("genre")]
         public string Genre { get; set; }
 
-        [JsonProperty("chapter")]
+        [JsonProperty("chapters")]
         public List<Chapter> Chapters { get; set; }
 
         [JsonProperty("created_at")]

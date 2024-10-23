@@ -80,7 +80,7 @@ namespace v2api_client_csharp
  
 
         // Method to monitor SSE stream
-        public async Task MonitorSseAsync(
+        public async Task ChatSseAsync(
             string characterId, 
             string gameId, 
             string message, 
