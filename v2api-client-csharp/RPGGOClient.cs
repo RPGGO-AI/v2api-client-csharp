@@ -86,7 +86,7 @@ namespace v2api_client_csharp
             string message, 
             string messageId, 
             string sessionId, 
-            Action<string> onChatMessageReceived, 
+            Action<string, string> onChatMessageReceived, 
             Action<string> onImageMessageReceived)
         {
             var requestBody = new
@@ -128,7 +128,7 @@ namespace v2api_client_csharp
 
                             if (sseMsg.Data.Result.CharacterType  == "common_npc")
                             {
-                                onChatMessageReceived(sseMsg.Data.Result.Text);
+                                onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
                             } 
                             else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
                             {
