@@ -130,6 +130,12 @@ namespace v2api_client_csharp
                             {
                                 onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
                             } 
+                            else if (sseMsg.Data.Result.CharacterType == "async_npc")
+                            {
+                                if (sseMsg.Data.Result.Text != "") {
+                                    onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
+                                }
+                            }
                             else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
                             {
                                 onImageMessageReceived(sseMsg.Data.Result.Image);
