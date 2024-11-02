@@ -44,9 +44,9 @@ namespace RPGGoApiExample
             string characterId = gameMetadata.Data.Chapters[0].Characters[0].Id;
 
             // Callback function to handle new SSE messages
-            void OnChatMessageReceived(string chatMessage)
+            void OnChatMessageReceived(string characterId, string chatMessage)
             {
-                Console.WriteLine($"New chat message received: {chatMessage}");
+                Console.WriteLine($"{characterId} has new chat message received: {chatMessage}");
                 Console.WriteLine();
                 // You can further parse and process the received message here
             }
@@ -62,13 +62,15 @@ namespace RPGGoApiExample
             // Monitor SSE stream
             await client.ChatSseAsync(characterId, gameId, "hello", msgId, sessionId, OnChatMessageReceived, OnImageMessageReceived);
 
+            await client.ChatSseAsync(characterId, gameId, "It's so great to finally meet you in person, Penny! What do you love about Stardew Valley?", msgId, sessionId, OnChatMessageReceived, OnImageMessageReceived);
+
         }
 
 
         static async Task Main(string[] args)
         {
             var apiKey = ""; // Replace with your actual API key
-            var gameId = "7411057c-43a0-4fbb-b4b8-f0b02ba3cb02";
+            var gameId = "G2AHD9ENT";
             string sessionId = Guid.NewGuid().ToString();
             
 
