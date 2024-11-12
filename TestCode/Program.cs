@@ -8,6 +8,43 @@ using v2api_client_csharp;
 
 namespace RPGGoApiExample
 {
+
+    class FunctionProcessor
+    {
+        // Callback function to handle new SSE messages
+        public static void OnChatMessageReceived(string characterId, string chatMessage)
+        {
+            Console.WriteLine($"{characterId} has new chat message received: {chatMessage}");
+            Console.WriteLine();
+            // You can further parse and process the received message here
+        }
+
+        // 
+        public static void OnImageMessageReceived(string imageUrl)
+        {
+            Console.WriteLine($"New image message received: {imageUrl}");
+            Console.WriteLine();
+            // You can further parse and process the received message here
+        }
+
+        public static void onChapterSwitchMessageReceived(string chapterEndingMsg)
+        {
+            Console.WriteLine($"Current chapter ends.");
+            Console.WriteLine($"{chapterEndingMsg}");
+            Console.WriteLine($"New chapter starts.");
+            Console.WriteLine();
+            // You can fetch the character from next chapter in the GameMetaData
+        }
+
+        public static void onGameEndingMessageReceived(string gameEndingMsg)
+        {
+            Console.WriteLine($"Game is Over.");
+            Console.WriteLine($"{gameEndingMsg}");
+            Console.WriteLine();
+            // You can do some post-game logic below
+        }
+    }
+
     class Program
     {
         static async Task TestGetMeta(RPGGOClient client, string gameId)
@@ -43,34 +80,98 @@ namespace RPGGoApiExample
             string msgId = Guid.NewGuid().ToString().Substring(0, 5);
             string characterId = gameMetadata.Data.Chapters[0].Characters[0].Id;
 
-            // Callback function to handle new SSE messages
-            void OnChatMessageReceived(string characterId, string chatMessage)
-            {
-                Console.WriteLine($"{characterId} has new chat message received: {chatMessage}");
-                Console.WriteLine();
-                // You can further parse and process the received message here
-            }
 
-            // 
-            void OnImageMessageReceived(string imageUrl)
-            {
-                Console.WriteLine($"New image message received: {imageUrl}");
-                Console.WriteLine();
-                // You can further parse and process the received message here
-            }
 
             // Monitor SSE stream
-            await client.ChatSseAsync(characterId, gameId, "hello", msgId, sessionId, OnChatMessageReceived, OnImageMessageReceived);
+            await client.ChatSseAsync(
+                characterId, 
+                gameId, 
+                "hello", 
+                msgId, 
+                sessionId, 
+                FunctionProcessor.OnChatMessageReceived, 
+                FunctionProcessor.OnImageMessageReceived,
+                FunctionProcessor.onChapterSwitchMessageReceived,
+                FunctionProcessor.onGameEndingMessageReceived
+             );
+        }
 
-            await client.ChatSseAsync(characterId, gameId, "It's so great to finally meet you in person, Penny! What do you love about Stardew Valley?", msgId, sessionId, OnChatMessageReceived, OnImageMessageReceived);
+        static async Task TestSyncedGame(RPGGOClient client, string gameId, string sessionId)
+        {
+            var gameMetadata = await client.GetGameMetadataAsync(gameId);
+            string choosedCharacterId = gameMetadata.Data.Chapters[0].Characters[0].Id;
 
+            Console.Write("Start to play with agent and input exit to quite the game.");
+            Console.WriteLine();
+            while (true)
+            {
+                string msgId = Guid.NewGuid().ToString().Substring(0, 5);
+                Console.Write("Your input:");
+                
+               var input = Console.ReadLine();
+                if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                // Monitor SSE stream
+                await client.ChatSseAsync(
+                    choosedCharacterId, 
+                    gameId,
+                    input,
+                    msgId,
+                    sessionId,
+                    FunctionProcessor.OnChatMessageReceived,
+                    FunctionProcessor.OnImageMessageReceived,
+                    FunctionProcessor.onChapterSwitchMessageReceived,
+                    FunctionProcessor.onGameEndingMessageReceived
+                 );
+                Console.WriteLine();
+            }
+        }
+
+
+        static async Task TestAsyncChatGame(RPGGOClient client, string gameId, string sessionId)
+        {
+            var gameMetadata = await client.GetGameMetadataAsync(gameId);
+
+            string msgId = Guid.NewGuid().ToString().Substring(0, 5);
+            string choosedCharacterId = gameMetadata.Data.Chapters[0].Characters[0].Id;
+            string choosedCharacterName = gameMetadata.Data.Chapters[0].Characters[0].Name;
+
+            // for check Affection
+            string dm_id = "CCT67P3C0";
+
+            await client.ChatSseAsync(
+                choosedCharacterId,
+                gameId,
+                "hello",
+                msgId,
+                sessionId,
+                FunctionProcessor.OnChatMessageReceived,
+                FunctionProcessor.OnImageMessageReceived,
+                FunctionProcessor.onChapterSwitchMessageReceived,
+                FunctionProcessor.onGameEndingMessageReceived
+            );
+
+            await client.ChatSseAsync(
+                choosedCharacterId,
+                gameId,
+                $"Give me {choosedCharacterName}'s Affection",
+                msgId,
+                sessionId,
+                FunctionProcessor.OnChatMessageReceived,
+                FunctionProcessor.OnImageMessageReceived,
+                FunctionProcessor.onChapterSwitchMessageReceived,
+                FunctionProcessor.onGameEndingMessageReceived
+            );
         }
 
 
         static async Task Main(string[] args)
         {
-            var apiKey = ""; // Replace with your actual API key
-            var gameId = "G2AHD9ENT";
+            var apiKey = "Bearer "; // Replace with your actual API key
+            var gameId = "gG2xmvEDS";
             string sessionId = Guid.NewGuid().ToString();
             
 
@@ -86,11 +187,19 @@ namespace RPGGoApiExample
                 Console.WriteLine("Testing StartGameAsync ... ");
                 await TestStartSession(rpgGoClient, gameId, sessionId);
 
-                Console.WriteLine("Testing ResumeSessionAsync ... ");
-                await TestResumeSession(rpgGoClient, gameId, sessionId);
+                //Console.WriteLine("Testing ResumeSessionAsync ... ");
+                //await TestResumeSession(rpgGoClient, gameId, sessionId);
 
-                Console.WriteLine("Testing ChatSseAsync ... ");
-                await TestChatSSE(rpgGoClient, gameId, sessionId, "hello world!");
+                //Console.WriteLine("Testing ChatSseAsync ... ");
+                //await TestChatSSE(rpgGoClient, gameId, sessionId, "hello world!");
+
+                
+                Console.WriteLine("Testing TestSyncedGame ... ");
+                await TestSyncedGame(rpgGoClient, gameId, sessionId);
+
+
+                //Console.WriteLine("Testing TestAsyncChatGame ... ");
+                //await TestAsyncChatGame(rpgGoClient, gameId, sessionId);
 
 
             }
