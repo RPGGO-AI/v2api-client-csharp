@@ -14,7 +14,7 @@ namespace v2api_client_csharp
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
-        private readonly string _apiEndpoint = "https://backend-dev-qavdnvfe5a-uc.a.run.app";  //https://api.rpggo.ai
+        private readonly string _apiEndpoint = "https://api.rpggo.ai";
 
         public RPGGOClient(string apiKey)
         {
