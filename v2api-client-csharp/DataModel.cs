@@ -206,6 +206,8 @@ namespace v2api_client_csharp
     public class SSEData
     {
         public Result Result { get; set; }
+
+        [JsonProperty("game_status")]
         public GameStatus GameStatus { get; set; }
     }
 

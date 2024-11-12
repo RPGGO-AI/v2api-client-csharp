@@ -5,11 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
+
+using Microsoft.Extensions.Logging;
+
 namespace v2api_client_csharp
 {
     public class RPGGOClient
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger _logger;
+        private readonly string _apiEndpoint = "https://backend-dev-qavdnvfe5a-uc.a.run.app";  //https://api.rpggo.ai
 
         public RPGGOClient(string apiKey)
         {
@@ -18,6 +23,8 @@ namespace v2api_client_csharp
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.Add("Authorization", apiKey);
             //_httpClient.DefaultRequestHeaders..Add("Content-Type", "application/json");
+            using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
+            _logger = factory.CreateLogger("RPGGOClient");
         }
 
         public async Task<GameMetadataResponse> GetGameMetadataAsync(string gameId)
@@ -29,7 +36,7 @@ namespace v2api_client_csharp
 
             var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/gamemetadata", requestContent);
+            var response = await _httpClient.PostAsync( _apiEndpoint + "/v2/open/game/gamemetadata", requestContent);
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -49,7 +56,7 @@ namespace v2api_client_csharp
 
             var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/startgame", requestContent);
+            var response = await _httpClient.PostAsync(_apiEndpoint + "/v2/open/game/startgame", requestContent);
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -69,7 +76,7 @@ namespace v2api_client_csharp
 
             var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/resumesession", requestContent);
+            var response = await _httpClient.PostAsync(_apiEndpoint + "/v2/open/game/resumesession", requestContent);
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -87,8 +94,12 @@ namespace v2api_client_csharp
             string messageId, 
             string sessionId, 
             Action<string, string> onChatMessageReceived, 
-            Action<string> onImageMessageReceived)
+            Action<string> onImageMessageReceived,
+            Action<string> onChapterSwitchMessageReceived,
+            Action<string> onGameEndingMessageReceived)
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
             var requestBody = new
             {
                 character_id = characterId,
@@ -100,7 +111,7 @@ namespace v2api_client_csharp
 
             var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://api.rpggo.ai/v2/open/game/chatsse", requestContent);
+            var response = await _httpClient.PostAsync(_apiEndpoint + "/v2/open/game/chatsse", requestContent);
             response.EnsureSuccessStatusCode();
 
             // Get the stream to read SSE messages
@@ -126,19 +137,39 @@ namespace v2api_client_csharp
                                 throw new Exception("json deserialize issue:" + completeMessage);
                             }
 
-                            if (sseMsg.Data.Result.CharacterType  == "common_npc")
+                            if (sseMsg.Data.Result != null)
                             {
-                                onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
-                            } 
-                            else if (sseMsg.Data.Result.CharacterType == "async_npc")
-                            {
-                                if (sseMsg.Data.Result.Text != "") {
+
+                                if (sseMsg.Data.Result.CharacterType == "common_npc")
+                                {
                                     onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
                                 }
-                            }
-                            else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
-                            {
-                                onImageMessageReceived(sseMsg.Data.Result.Image);
+                                else if (sseMsg.Data.Result.CharacterType == "async_npc")
+                                {
+                                    if (sseMsg.Data.Result.Text != "")
+                                    {
+                                        onChatMessageReceived(sseMsg.Data.Result.CharacterId, sseMsg.Data.Result.Text);
+                                    }
+                                }
+                                else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
+                                {
+                                    onImageMessageReceived(sseMsg.Data.Result.Image);
+                                }
+
+                                if (sseMsg.Data.GameStatus != null)
+                                {
+                                    if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 2)
+                                    // switch chapter
+                                    {
+                                        onChapterSwitchMessageReceived(sseMsg.Data.GameStatus.ActionMessage);
+                                    }
+                                    else if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 3)
+                                    {
+                                        onGameEndingMessageReceived(sseMsg.Data.GameStatus.ActionMessage);
+                                    }
+                                }
+                                  
+ 
                             }
 
                             completeMessage = string.Empty;
@@ -151,6 +182,10 @@ namespace v2api_client_csharp
                     }
                 }
             }
+
+            watch.Stop();
+            var elapsedMs = watch.ElapsedMilliseconds;
+            _logger.LogInformation("ChatSseAsync executed in {elapsedMs} ms.", elapsedMs);
         }
 
     }
