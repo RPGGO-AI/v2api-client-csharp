@@ -89,10 +89,7 @@ namespace RPGGoApiExample
                 "hello", 
                 msgId, 
                 sessionId, 
-                FunctionProcessor.OnChatMessageReceived, 
-                FunctionProcessor.OnImageMessageReceived,
-                FunctionProcessor.onChapterSwitchMessageReceived,
-                FunctionProcessor.onGameEndingMessageReceived
+                FunctionProcessor.OnChatMessageReceived
              );
         }
 

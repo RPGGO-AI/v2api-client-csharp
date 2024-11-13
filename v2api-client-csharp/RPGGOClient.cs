@@ -84,19 +84,19 @@ namespace v2api_client_csharp
 
             return resumeSessionResponse;
         }
- 
+
 
         // Method to monitor SSE stream
         public async Task ChatSseAsync(
-            string characterId, 
-            string gameId, 
-            string message, 
-            string messageId, 
-            string sessionId, 
-            Action<string, string> onChatMessageReceived, 
-            Action<string> onImageMessageReceived,
-            Action<string> onChapterSwitchMessageReceived,
-            Action<string> onGameEndingMessageReceived)
+            string characterId,
+            string gameId,
+            string message,
+            string messageId,
+            string sessionId,
+            Action<string, string> onChatMessageReceived,
+            Action<string> onImageMessageReceived = null,
+            Action<string> onChapterSwitchMessageReceived = null,
+            Action<string> onGameEndingMessageReceived = null)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -153,7 +153,7 @@ namespace v2api_client_csharp
                                 }
                                 else if (sseMsg.Data.Result.CharacterType == "picture_produce_dm")
                                 {
-                                    onImageMessageReceived(sseMsg.Data.Result.Image);
+                                    onImageMessageReceived?.Invoke(sseMsg.Data.Result.Image);
                                 }
 
                                 if (sseMsg.Data.GameStatus != null)
@@ -161,11 +161,11 @@ namespace v2api_client_csharp
                                     if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 2)
                                     // switch chapter
                                     {
-                                        onChapterSwitchMessageReceived(sseMsg.Data.GameStatus.ActionMessage);
+                                        onChapterSwitchMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage);
                                     }
                                     else if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 3)
                                     {
-                                        onGameEndingMessageReceived(sseMsg.Data.GameStatus.ActionMessage);
+                                        onGameEndingMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage);
                                     }
                                 }
                                   
