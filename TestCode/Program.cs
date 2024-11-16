@@ -205,7 +205,7 @@ namespace RPGGoApiExample
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching game metadata: {ex.Message}");
+                Console.WriteLine($"Error during running game: {ex.Message}");
             }
         }
     }
