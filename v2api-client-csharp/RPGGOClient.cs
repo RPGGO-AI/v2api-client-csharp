@@ -40,13 +40,13 @@ namespace v2api_client_csharp
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var gameMetadataResponse = JsonConvert.DeserializeObject<GameMetadataResponse>(responseContent);
+            var gameMetadataResponse = JsonConvert.DeserializeObject<GameMetadataResponse>(responseContent)!;
 
             return gameMetadataResponse;
         }
 
         // Start a game
-        public async Task<StartGameResponse> StartGameAsync(string gameId, string sessionId)
+        public async Task<GameOngoingResponse> StartGameAsync(string gameId, string sessionId)
         {
             var requestBody = new
             {
@@ -60,13 +60,13 @@ namespace v2api_client_csharp
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var startGameResponse = JsonConvert.DeserializeObject<StartGameResponse>(responseContent);
+            var startGameResponse = JsonConvert.DeserializeObject<GameOngoingResponse>(responseContent)!;
 
             return startGameResponse;
         }
 
         // Resume a game session
-        public async Task<StartGameResponse> ResumeSessionAsync(string gameId, string sessionId)
+        public async Task<GameOngoingResponse> ResumeSessionAsync(string gameId, string sessionId)
         {
             var requestBody = new
             {
@@ -80,9 +80,29 @@ namespace v2api_client_csharp
             response.EnsureSuccessStatusCode();
 
             var responseContent = await response.Content.ReadAsStringAsync();
-            var resumeSessionResponse = JsonConvert.DeserializeObject<StartGameResponse>(responseContent);
+            var resumeSessionResponse = JsonConvert.DeserializeObject<GameOngoingResponse>(responseContent)!;
 
             return resumeSessionResponse;
+        }
+
+        public async Task<GameOngoingResponse> SwitchChapterAsync(string gameId, string chapterId, string sessionId)
+        {
+            var requestBody = new
+            {
+                game_id = gameId,
+                chapter_id = chapterId,
+                session_Id = sessionId
+            };
+
+            var requestContent = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(_apiEndpoint + "/v2/open/game/changechapter", requestContent);
+            response.EnsureSuccessStatusCode();
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var changeChapterResponse = JsonConvert.DeserializeObject<GameOngoingResponse>(responseContent)!;
+
+            return changeChapterResponse;
         }
 
 
@@ -95,7 +115,7 @@ namespace v2api_client_csharp
             string sessionId,
             Action<string, string> onChatMessageReceived,
             Action<string> onImageMessageReceived = null,
-            Action<string> onChapterSwitchMessageReceived = null,
+            Action<string, GameOngoingResponse> onChapterSwitchMessageReceived = null,
             Action<string> onGameEndingMessageReceived = null)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -159,9 +179,13 @@ namespace v2api_client_csharp
                                 if (sseMsg.Data.GameStatus != null)
                                 {
                                     if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 2)
-                                    // switch chapter
                                     {
-                                        onChapterSwitchMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage);
+                                        var next_chapter_id = sseMsg.Data.GameStatus.ChapterId;
+                                        var new_meta_response = await SwitchChapterAsync(gameId, next_chapter_id, sessionId);
+                                        _logger.LogInformation($"switch to new chapter {next_chapter_id}");
+                                        // switch to new chapter and pass new metadata for application processing
+                                        onChapterSwitchMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage, new_meta_response);
+                                        
                                     }
                                     else if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 3)
                                     {

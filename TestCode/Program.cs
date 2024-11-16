@@ -27,13 +27,16 @@ namespace RPGGoApiExample
             // You can further parse and process the received message here
         }
 
-        public static void onChapterSwitchMessageReceived(string chapterEndingMsg)
+        public static void onChapterSwitchMessageReceived(string chapterEndingMsg, GameOngoingResponse metaDataResponse)
         {
             Console.WriteLine($"Current chapter ends.");
             Console.WriteLine($"{chapterEndingMsg}");
             Console.WriteLine($"New chapter starts.");
             Console.WriteLine();
-            // You can fetch the character from next chapter in the GameMetaData
+            // You can fetch the character from next chapter in the GameMetaData.
+            // for example, print the new chapter info
+            Console.WriteLine($"New chapter Name:{metaDataResponse.Data.Chapter.Name}");
+            Console.WriteLine(metaDataResponse.Data.Chapter.Characters);
         }
 
         public static void onGameEndingMessageReceived(string gameEndingMsg)
@@ -60,16 +63,16 @@ namespace RPGGoApiExample
         static async Task TestStartSession(RPGGOClient client, string gameId, string sessionId)
         {
             // Start a new game session
-            var startGameResponse = await client.StartGameAsync(gameId, sessionId);
-            Console.WriteLine($"Started Game: {startGameResponse.Data.Name}");
+            var gameMeta = await client.StartGameAsync(gameId, sessionId);
+            Console.WriteLine($"Started Game: {gameMeta.Data.Name}");
             Console.WriteLine();
         }
 
         static async Task TestResumeSession(RPGGOClient client, string gameId, string sessionId)
         {
             // Resume an existing game session
-            var resumeSessionResponse = await client.ResumeSessionAsync(gameId, sessionId);
-            Console.WriteLine($"Resumed Game: {resumeSessionResponse.Data.Name}");
+            var gameMeta = await client.ResumeSessionAsync(gameId, sessionId);
+            Console.WriteLine($"Resumed Game: {gameMeta.Data.Name}");
             Console.WriteLine();
         }
 
@@ -184,8 +187,8 @@ namespace RPGGoApiExample
                 Console.WriteLine("Testing StartGameAsync ... ");
                 await TestStartSession(rpgGoClient, gameId, sessionId);
 
-                //Console.WriteLine("Testing ResumeSessionAsync ... ");
-                //await TestResumeSession(rpgGoClient, gameId, sessionId);
+                Console.WriteLine("Testing ResumeSessionAsync ... ");
+                await TestResumeSession(rpgGoClient, gameId, sessionId);
 
                 //Console.WriteLine("Testing ChatSseAsync ... ");
                 //await TestChatSSE(rpgGoClient, gameId, sessionId, "hello world!");
