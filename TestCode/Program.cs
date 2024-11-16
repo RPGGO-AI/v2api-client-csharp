@@ -27,16 +27,21 @@ namespace RPGGoApiExample
             // You can further parse and process the received message here
         }
 
-        public static void onChapterSwitchMessageReceived(string chapterEndingMsg, GameOngoingResponse metaDataResponse)
+        public static void onBeforeChapterSwitch(string chapterEndingMsg, GameOngoingResponse? metaDataResponse)
         {
-            Console.WriteLine($"Current chapter ends.");
+            Console.WriteLine($"Current chapter <{metaDataResponse?.Data.Chapter.Name}> ends.");
             Console.WriteLine($"{chapterEndingMsg}");
+            Console.WriteLine();
+        }
+
+        public static void onAfterChapterSwitch(string chapterEndingMsg, GameOngoingResponse? metaDataResponse)
+        {
             Console.WriteLine($"New chapter starts.");
             Console.WriteLine();
             // You can fetch the character from next chapter in the GameMetaData.
             // for example, print the new chapter info
-            Console.WriteLine($"New chapter Name:{metaDataResponse.Data.Chapter.Name}");
-            Console.WriteLine(metaDataResponse.Data.Chapter.Characters);
+            Console.WriteLine($"New chapter Name:{metaDataResponse?.Data.Chapter.Name}");
+            Console.WriteLine(metaDataResponse?.Data.Chapter.Background);
         }
 
         public static void onGameEndingMessageReceived(string gameEndingMsg)
@@ -123,7 +128,8 @@ namespace RPGGoApiExample
                     sessionId,
                     FunctionProcessor.OnChatMessageReceived,
                     FunctionProcessor.OnImageMessageReceived,
-                    FunctionProcessor.onChapterSwitchMessageReceived,
+                    FunctionProcessor.onBeforeChapterSwitch,
+                    FunctionProcessor.onAfterChapterSwitch,
                     FunctionProcessor.onGameEndingMessageReceived
                  );
                 Console.WriteLine();
@@ -150,7 +156,8 @@ namespace RPGGoApiExample
                 sessionId,
                 FunctionProcessor.OnChatMessageReceived,
                 FunctionProcessor.OnImageMessageReceived,
-                FunctionProcessor.onChapterSwitchMessageReceived,
+                FunctionProcessor.onBeforeChapterSwitch,
+                FunctionProcessor.onAfterChapterSwitch,
                 FunctionProcessor.onGameEndingMessageReceived
             );
 
@@ -162,7 +169,8 @@ namespace RPGGoApiExample
                 sessionId,
                 FunctionProcessor.OnChatMessageReceived,
                 FunctionProcessor.OnImageMessageReceived,
-                FunctionProcessor.onChapterSwitchMessageReceived,
+                FunctionProcessor.onBeforeChapterSwitch,
+                FunctionProcessor.onAfterChapterSwitch,
                 FunctionProcessor.onGameEndingMessageReceived
             );
         }
