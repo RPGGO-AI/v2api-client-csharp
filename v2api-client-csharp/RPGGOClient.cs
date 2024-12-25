@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -11,15 +12,20 @@ namespace v2api_client_csharp
     public class RPGGOClient
     {
         private readonly HttpClient _httpClient;
-        private readonly string _apiEndpoint = "https://api.rpggo.ai";
+        private string _apiEndpoint = "https://api.rpggo.ai";
+        private GameOngoingResponse? _previousGameMeta = null;
+        private GameOngoingResponse? _currentGameMeta = null;
 
         public RPGGOClient(string apiKey)
         {
             _httpClient = new HttpClient();
-            //_httpClient.DefaultRequestHeaders.Add("accept", "application/json");
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.Add("Authorization", apiKey);
-            //_httpClient.DefaultRequestHeaders..Add("Content-Type", "application/json");
+        }
+
+        public RPGGOClient(string apiKey, string apiEndpoint) : this(apiKey)
+        {
+            _apiEndpoint = apiEndpoint;
         }
 
         public async Task<GameMetadataResponse> GetGameMetadataAsync(string gameId)
@@ -67,6 +73,8 @@ namespace v2api_client_csharp
                 Console.WriteLine($"Fail to start game: {startGameResponse.Msg}");
             }
 
+            _currentGameMeta = startGameResponse;
+
             return startGameResponse;
         }
 
@@ -91,6 +99,8 @@ namespace v2api_client_csharp
             {
                 Console.WriteLine($"Fail to result game: {resumeSessionResponse.Msg}");
             }
+
+            _currentGameMeta = resumeSessionResponse;
             return resumeSessionResponse;
         }
 
@@ -116,6 +126,9 @@ namespace v2api_client_csharp
                 Console.WriteLine($"Fail to result game: {changeChapterResponse.Msg}");
             }
 
+            _previousGameMeta = _currentGameMeta;
+            _currentGameMeta = changeChapterResponse;
+
             return changeChapterResponse;
         }
 
@@ -129,8 +142,12 @@ namespace v2api_client_csharp
             string sessionId,
             Action<string, string> onChatMessageReceived,
             Action<string> onImageMessageReceived = null,
-            Action<string, GameOngoingResponse> onChapterSwitchMessageReceived = null,
-            Action<string> onGameEndingMessageReceived = null)
+            Action<string, GameOngoingResponse?> onBeforeChapterSwitch = null,
+            Action<string, GameOngoingResponse?> onAfterChapterSwitch = null,
+            Action<string> onGameEndingMessageReceived = null,
+            Action<string> onGameErrorReceived = null,
+            Action<string> onGameOutOfBalanceReceived = null
+            )
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -164,6 +181,17 @@ namespace v2api_client_csharp
                     {
                         if (!string.IsNullOrWhiteSpace(completeMessage))
                         {
+                            if (completeMessage.Contains("event: err"))
+                            {
+                                onGameErrorReceived?.Invoke(completeMessage);
+                                break;
+                            }
+                            if (completeMessage.Contains("The game session has ended"))
+                            {
+                                onGameEndingMessageReceived?.Invoke("The game session has ended. You need to restart the game.");
+                                completeMessage = string.Empty;
+                            }
+
                             // Trigger callback when the message is complete
                             var sseMsg = JsonConvert.DeserializeObject<SSEResponse>(completeMessage);
                             if (sseMsg == null)
@@ -171,9 +199,19 @@ namespace v2api_client_csharp
                                 throw new Exception("json deserialize issue:" + completeMessage);
                             }
 
-                            if (sseMsg.Ret != 200 && sseMsg.Ret != 0)
+                            if (sseMsg.Ret != 200 && sseMsg.Ret != 0 && sseMsg.Ret != 10000602)
                             {
-                                Console.WriteLine($"Fail to chat with {characterId}: {sseMsg.Message}");
+                                message = $"Fail to chat with {characterId}: {sseMsg.Message}";
+                                Console.WriteLine(message);
+                                onGameErrorReceived?.Invoke(message);
+                                break;
+                            }
+
+                            if (sseMsg.Ret == 10000602)
+                            {
+                                message = $"You are run out of GG Coin. Visit https://rpggo.ai to get more GG coins to continue...";
+                                onGameOutOfBalanceReceived?.Invoke(message);
+                                break;
                             }
 
                             if (sseMsg.Data.Result != null)
@@ -199,20 +237,21 @@ namespace v2api_client_csharp
                                 {
                                     if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 2)
                                     {
+                                        onBeforeChapterSwitch?.Invoke(sseMsg.Data.GameStatus.ActionMessage, _currentGameMeta);
                                         var next_chapter_id = sseMsg.Data.GameStatus.ChapterId;
                                         var new_meta_response = await SwitchChapterAsync(gameId, next_chapter_id, sessionId);
                                         Console.WriteLine($"switch to new chapter {next_chapter_id}");
                                         // switch to new chapter and pass new metadata for application processing
-                                        onChapterSwitchMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage, new_meta_response);
-                                        
+                                        onAfterChapterSwitch?.Invoke(sseMsg.Data.GameStatus.ActionMessage, new_meta_response);
+
                                     }
                                     else if (sseMsg.Data.Result.CharacterType == "goal_check_dm" && sseMsg.Data.GameStatus.Action == 3)
                                     {
                                         onGameEndingMessageReceived?.Invoke(sseMsg.Data.GameStatus.ActionMessage);
                                     }
                                 }
-                                  
- 
+
+
                             }
 
                             completeMessage = string.Empty;
@@ -221,7 +260,11 @@ namespace v2api_client_csharp
                     else if (line.StartsWith("data:"))
                     {
                         // Extract data after the 'data:' field
-                        completeMessage += line.Substring(5).Trim();
+                        completeMessage = line.Substring(5).Trim() + " ";
+                    }
+                    else
+                    {
+                        completeMessage += line + " ";
                     }
                 }
             }
