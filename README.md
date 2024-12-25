@@ -29,7 +29,7 @@ This graph tells the exact magic about how the system works.
 
 Basically, RPGGO covers the end2end pipeline from building a game to rendering a game in real time. As a game developer, all you need to do is very simple:
 1. find a game you want to make it live in 2D graphic. Either, go to https://creator.rpggo.ai to build your own game if you are a good game designer, or go to https://rpggo.ai game lobby to find a game you like. Remember the game id.
-2. fill an [API Key Application form](https://forms.gle/SgYbkZE2aDj38mhT9) with the Game ID you chose, or contact them via email at [dev@rpggo.ai](mailto:dev@rpggo.ai)
+2. fill an [API Key Application form](https://developer.rpggo.ai/dev-docs/support/apply-your-test-key) with the Game ID you chose, or contact them via email at [dev@rpggo.ai](mailto:dev@rpggo.ai)
 3. After you get your key, you can use it in RPGGOClient.cs to access the game data and make this lib work. This project is also a good example to tell how the integration code will be.
 
 <br>
@@ -39,6 +39,12 @@ Basically, RPGGO covers the end2end pipeline from building a game to rendering a
 The best way is to use visual studio 2022, where you can easily manage coding, debugging in one station.
 
 But you can also use visual studio code with the extension "C# Dev Kit"
+
+
+
+## 📚 Publish to Nuget
+
+dotnet nuget push $path\v2api-client-csharp\bin\Release\v2api-client-csharp.1.0.8.nupkg --api-key $api-key --source https://api.nuget.org/v3/index.json
 
 
 ## ⚖️ License
